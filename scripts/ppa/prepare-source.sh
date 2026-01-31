@@ -10,6 +10,9 @@ pushd screenpipe-app-tauri >/dev/null
     bun install --frozen-lockfile
     bun run prebuild
     bun run build
+    # keep the source tarball clean: we only need the static export in out/
+    # leaving node_modules causes dpkg-source noise (e.g. "no final newline") and bloats the upload
+    rm -rf node_modules
   else
     echo "bun is required to build the desktop app frontend for the source upload."
     echo "install bun, then re-run: scripts/ppa/prepare-source.sh"

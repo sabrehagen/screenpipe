@@ -31,6 +31,9 @@ tar \
   --exclude='./debian' \
   --exclude='./target' \
   --exclude='./**/node_modules' \
+  --exclude='./**/node_modules/**' \
+  --exclude='./screenpipe-app-tauri/node_modules' \
+  --exclude='./screenpipe-app-tauri/node_modules/**' \
   -czf "$orig_tarball" \
   --transform="s,^\\.,screenpipe-${upstream_version}," \
   .
