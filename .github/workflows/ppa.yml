@@ -36,9 +36,17 @@ jobs:
             gnupg \
             ca-certificates \
             build-essential \
+            cargo \
+            rustc \
             pkg-config \
             clang \
+            libclang-dev \
             cmake
+          # Build-deps required by screenpipe (keep in sync with debian/control)
+          sudo apt-get install -y \
+            libsdl2-dev \
+            librsvg2-dev \
+            libayatana-appindicator3-dev
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
