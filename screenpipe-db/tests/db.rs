@@ -866,7 +866,7 @@ mod tests {
                     .unwrap();
                 db.insert_audio_transcription(
                     audio_chunk_id,
-                    "test transcription",
+                    &format!("test transcription {}-{}", n, i),
                     0,
                     "",
                     &AudioDevice {
@@ -933,7 +933,7 @@ mod tests {
                     .unwrap();
                 db.insert_audio_transcription(
                     audio_chunk_id,
-                    "test transcription",
+                    &format!("test transcription {}-{}", n, i),
                     0,
                     "",
                     &AudioDevice {
@@ -1038,7 +1038,7 @@ mod tests {
         let audio_chunk_id = db.insert_audio_chunk("test_audio.mp4").await.unwrap();
         db.insert_audio_transcription(
             audio_chunk_id,
-            "test transcription",
+            "test transcription speaker1",
             0,
             "",
             &AudioDevice {
@@ -1105,7 +1105,7 @@ mod tests {
         let audio_chunk_id2 = db.insert_audio_chunk("test_audio2.mp4").await.unwrap();
         db.insert_audio_transcription(
             audio_chunk_id2,
-            "test transcription",
+            "test transcription speaker2",
             0,
             "",
             &AudioDevice {
