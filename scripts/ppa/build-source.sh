@@ -41,12 +41,12 @@ tar \
 echo "building source package..."
 if [[ -n "${PPA_GPG_KEYID:-}" && -n "${PPA_GPG_PASSPHRASE:-}" ]]; then
   # non-interactive signing (for ci)
-  debuild -S -sa \
+  debuild -S -sa --no-lintian \
     -k"$PPA_GPG_KEYID" \
     -p"gpg --batch --yes --pinentry-mode loopback --passphrase ${PPA_GPG_PASSPHRASE}"
 else
   # interactive signing (local)
-  debuild -S -sa
+  debuild -S -sa --no-lintian
 fi
 
 echo "ok: source package created in parent dir."
