@@ -12,10 +12,10 @@ permissions:
 jobs:
   publish-ppa:
     runs-on: ubuntu-24.04
+    environment: launchpad.net
     env:
       DEBEMAIL: "jackson@jacksondelahunt.com"
       DEBFULLNAME: "Jackson Delahunt"
-      # default to sabrehagen/screenpipe; override via repo secret if needed
       PPA_TARGET: ${{ secrets.PPA_TARGET || 'ppa:sabrehagen/screenpipe' }}
       PPA_GPG_PRIVATE_KEY: ${{ secrets.PPA_GPG_PRIVATE_KEY }}
       PPA_GPG_PASSPHRASE: ${{ secrets.PPA_GPG_PASSPHRASE }}
