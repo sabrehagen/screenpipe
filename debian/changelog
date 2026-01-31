@@ -1,3 +1,9 @@
+screenpipe (2.0.168-0ubuntu1~noble2) noble; urgency=medium
+
+  * Fix Launchpad build: use Cargo.lock v3 (Ubuntu cargo compatible).
+
+ -- Jackson Delahunt <jackson@jacksondelahunt.com>  Sat, 31 Jan 2026 16:10:00 +0000
+
 screenpipe (2.0.168-0ubuntu1~noble1) noble; urgency=medium
 
   * initial ppa release.
