@@ -5,10 +5,12 @@ mod tests {
     use screenpipe_vision::capture_screenshot_by_window::{CapturedWindow, WindowFilters};
     use screenpipe_vision::core::OcrTaskData;
     use screenpipe_vision::monitor::get_default_monitor;
+    use screenpipe_vision::ocr_cache::WindowOcrCache;
     use screenpipe_vision::{process_ocr_task, OcrEngine};
     use std::sync::Arc;
     use std::{path::PathBuf, time::Instant};
     use tokio::sync::mpsc;
+    use tokio::sync::Mutex;
 
     use screenpipe_vision::{continuous_capture, CaptureResult};
     use std::time::Duration;
@@ -43,6 +45,12 @@ mod tests {
             window_height: image.height(),
         }];
 
+        // Cache entries expire after 5 minutes, max 100 windows cached
+        let ocr_cache = Arc::new(Mutex::new(WindowOcrCache::new(
+            Duration::from_secs(300),
+            100,
+        )));
+
         let result = process_ocr_task(
             OcrTaskData {
                 image: image_arc,
@@ -54,6 +62,7 @@ mod tests {
             },
             &ocr_engine,
             vec![],
+            ocr_cache,
         )
         .await;
 
@@ -72,9 +81,9 @@ mod tests {
 
         // Set up test parameters
         let interval = Duration::from_millis(1000);
-        let save_text_files_flag = false;
+        let capture_unfocused_windows = false;
         let ocr_engine = OcrEngine::WindowsNative;
-        let window_filters = Arc::new(WindowFilters::new(&[], &[]));
+        let window_filters = Arc::new(WindowFilters::new(&[], &[], &[]));
 
         // Spawn the continuous_capture function with corrected parameter order
         let capture_handle = tokio::spawn(continuous_capture(
@@ -84,7 +93,7 @@ mod tests {
             monitor,
             window_filters, // window filters as empty vec
             vec![],         // languages as empty vec
-            save_text_files_flag,
+            capture_unfocused_windows,
         ));
 
         // Wait for a short duration to allow some captures to occur

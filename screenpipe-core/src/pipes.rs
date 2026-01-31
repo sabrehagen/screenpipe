@@ -36,10 +36,6 @@ use reqwest_middleware::ClientBuilder;
 use std::collections::HashSet;
 use std::str::FromStr;
 
-// Add at top of file with other imports
-#[cfg(windows)]
-use std::os::windows::process::CommandExt;
-
 #[derive(Clone, Debug, Copy)]
 pub enum PipeState {
     Port(u16),
