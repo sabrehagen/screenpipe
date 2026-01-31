@@ -69,8 +69,11 @@ jobs:
       if: always()
       with:
         name: screenpipe-data
+        if-no-files-found: ignore
         path: |
           ~/.screenpipe/data/
+          ~/.screenpipe/*.mp4
+          ~/.screenpipe/db.sqlite
     
     - name: Upload test image
       uses: actions/upload-artifact@v4

@@ -1,11 +1,10 @@
 #!/bin/bash
 set -e
 
-# Create test image with clear text
-convert -size 400x150 xc:white -font DejaVu-Sans -pointsize 32 -fill black -draw "text 20,80 'Hello, Screenpipe OCR'" test_image.png
-
-# Display the image
-DISPLAY=:99 display test_image.png &
+# Show a window with deterministic text.
+# NOTE: ImageMagick `display` windows don't reliably expose _NET_WM_PID in CI, and screen capture can fail to associate them with a process.
+# Using xterm gives a real PID-backed window and is much more reliable for OCR integration tests.
+DISPLAY=:99 xterm -geometry 80x10+50+50 -fa "DejaVu Sans Mono" -fs 24 -e bash -lc 'printf "Hello, Screenpipe OCR\n"; sleep 120' &
 DISPLAY_PID=$!
 
 # Wait for OCR with retries (up to 60 seconds)
@@ -21,7 +20,7 @@ for i in $(seq 1 $MAX_RETRIES); do
   ps -p $(cat screenpipe.pid) -o %cpu,%mem,cmd || true
 
   # Check for OCR text
-  OCR_TEXT=$(sqlite3 $HOME/.screenpipe/db.sqlite "SELECT text FROM ocr_text;" 2>/dev/null || echo "")
+  OCR_TEXT=$(sqlite3 "$HOME/.screenpipe/db.sqlite" "SELECT text FROM ocr_text;" 2>/dev/null || echo "")
 
   if echo "$OCR_TEXT" | grep -qi "Hello, Screenpipe OCR"; then
     OCR_FOUND=true
