@@ -87,4 +87,6 @@ jobs:
             echo "could not find .changes file in parent dir"
             exit 1
           fi
-          dput "$PPA_TARGET" "$changes_file"
+          # dput runs lintian by default in some setups and it can hang for ages on large source uploads.
+          # make this step bounded so CI doesn't get stuck.
+          timeout 20m dput "$PPA_TARGET" "$changes_file"
