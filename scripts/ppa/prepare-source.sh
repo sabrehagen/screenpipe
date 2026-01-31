@@ -17,14 +17,14 @@ pushd screenpipe-app-tauri >/dev/null
   fi
 popd >/dev/null
 
-echo "vendoring rust deps for workspace (debian/vendor-workspace)..."
-rm -rf debian/vendor-workspace
-mkdir -p debian/vendor-workspace
-cargo vendor --locked debian/vendor-workspace >/dev/null
+echo "vendoring rust deps for workspace (vendor-workspace)..."
+rm -rf vendor-workspace
+mkdir -p vendor-workspace
+cargo vendor --locked vendor-workspace >/dev/null
 
-echo "vendoring rust deps for tauri app (debian/vendor-app)..."
-rm -rf debian/vendor-app
-mkdir -p debian/vendor-app
-cargo vendor --locked --manifest-path screenpipe-app-tauri/src-tauri/Cargo.toml debian/vendor-app >/dev/null
+echo "vendoring rust deps for tauri app (vendor-app)..."
+rm -rf vendor-app
+mkdir -p vendor-app
+cargo vendor --locked --manifest-path screenpipe-app-tauri/src-tauri/Cargo.toml vendor-app >/dev/null
 
 echo "ok: vendor dirs + out/ are ready."
