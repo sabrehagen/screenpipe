@@ -1,0 +1,12 @@
+Description: Downgrade Cargo.lock to v3 for Ubuntu cargo
+ Ubuntu 24.04 ships cargo 1.75 which cannot parse Cargo.lock version 4.
+ Apply this patch during package build so the upstream orig tarball remains
+ unchanged (Launchpad rejects changing .orig.tar.* for same upstream version).
+Forwarded: not-needed (packaging-only)
+Author: Jackson Delahunt <jackson@jacksondelahunt.com>
+
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@
+-version = 4
++version = 3
