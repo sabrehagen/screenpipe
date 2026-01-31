@@ -1,8 +1,8 @@
-screenpipe (2.0.168-0ubuntu1~noble3) noble; urgency=medium
+screenpipe (2.0.168-0ubuntu1~noble4) noble; urgency=medium
 
-  * Fix Launchpad build: patch Cargo.lock to v3 (Ubuntu cargo compatible).
+  * Fix quilt patch format for Cargo.lock v3 downgrade.
 
- -- Jackson Delahunt <jackson@jacksondelahunt.com>  Sat, 31 Jan 2026 17:40:00 +0000
+ -- Jackson Delahunt <jackson@jacksondelahunt.com>  Sat, 31 Jan 2026 17:45:00 +0000
 
 screenpipe (2.0.168-0ubuntu1~noble1) noble; urgency=medium
 
