@@ -1,0 +1,55 @@
+Source: screenpipe
+Section: utils
+Priority: optional
+Maintainer: Jackson Delahunt <jackson@jacksondelahunt.com>
+Rules-Requires-Root: no
+Build-Depends:
+ debhelper-compat (= 13),
+ ca-certificates,
+ g++,
+ clang,
+ cmake,
+ cargo,
+ rustc,
+ pkg-config,
+ libssl-dev,
+ libclang-dev,
+ libavformat-dev,
+ libavfilter-dev,
+ libavdevice-dev,
+ libtesseract-dev,
+ libsdl2-dev,
+ libxdo-dev,
+ libxtst-dev,
+ libgtk-3-dev,
+ libwebkit2gtk-4.1-dev,
+ libsoup-3.0-dev,
+ libjavascriptcoregtk-4.1-dev,
+ librsvg2-dev,
+ libayatana-appindicator3-dev | libappindicator3-dev
+Standards-Version: 4.6.2
+Homepage: https://github.com/mediar-ai/screenpipe
+Vcs-Git: https://github.com/mediar-ai/screenpipe.git
+Vcs-Browser: https://github.com/mediar-ai/screenpipe
+
+Package: screenpipe-cli
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends},
+ ffmpeg,
+ tesseract-ocr
+Description: screenpipe command line interface
+ screenpipe records your screen and audio, extracts ocr and stt, stores locally,
+ and exposes the data for local/ai workflows.
+
+Package: screenpipe-gui
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends},
+ screenpipe-cli (= ${binary:Version})
+Description: screenpipe desktop app (tauri)
+ 24/7 memory for your desktop. 100% local. you own your data.
+
+Package: screenpipe
+Architecture: all
+Depends: screenpipe-cli (= ${binary:Version}), screenpipe-gui (= ${binary:Version}), ${misc:Depends}
+Description: screenpipe meta package
+ installs both screenpipe-cli and screenpipe-gui.

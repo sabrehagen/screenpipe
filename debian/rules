@@ -1,0 +1,32 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+export RUST_BACKTRACE = 1
+export CARGO_NET_OFFLINE = true
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	@test -d debian/vendor-workspace || (echo "missing debian/vendor-workspace. run scripts/ppa/prepare-source.sh" && false)
+	@test -d debian/vendor-app || (echo "missing debian/vendor-app. run scripts/ppa/prepare-source.sh" && false)
+	@test -f screenpipe-app-tauri/out/index.html || (echo "missing screenpipe-app-tauri/out. run scripts/ppa/prepare-source.sh (builds next export)" && false)
+
+override_dh_auto_build:
+	# build cli (screenpipe-server -> bin: screenpipe)
+	rm -rf debian/cargo-home-workspace
+	mkdir -p debian/cargo-home-workspace
+	cp debian/cargo-config-workspace.toml debian/cargo-home-workspace/config.toml
+	CARGO_HOME="$(CURDIR)/debian/cargo-home-workspace" \
+		cargo build --release --locked --offline -p screenpipe-server --bin screenpipe
+
+	# build desktop app (screenpipe-app-tauri/src-tauri -> bin: screenpipe-app)
+	rm -rf debian/cargo-home-app
+	mkdir -p debian/cargo-home-app
+	cp debian/cargo-config-app.toml debian/cargo-home-app/config.toml
+	CARGO_HOME="$(CURDIR)/debian/cargo-home-app" \
+		cargo build --release --locked --offline --manifest-path screenpipe-app-tauri/src-tauri/Cargo.toml --bin screenpipe-app
+
+override_dh_auto_test:
+	# skip tests in ppa builds (heavy hardware-dependent integration tests)
+	true

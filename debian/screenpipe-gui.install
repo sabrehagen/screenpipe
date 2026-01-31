@@ -1,0 +1,3 @@
+screenpipe-app-tauri/src-tauri/target/release/screenpipe-app usr/lib/screenpipe/
+debian/screenpipe.desktop usr/share/applications/
+screenpipe-app-tauri/src-tauri/icons/128x128.png usr/share/icons/hicolor/128x128/apps/screenpipe.png

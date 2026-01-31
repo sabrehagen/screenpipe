@@ -1,0 +1,82 @@
+name: Publish PPA (ubuntu 24.04)
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish-ppa:
+    runs-on: ubuntu-24.04
+    env:
+      DEBEMAIL: "jackson@jacksondelahunt.com"
+      DEBFULLNAME: "Jackson Delahunt"
+      # default to sabrehagen/screenpipe; override via repo secret if needed
+      PPA_TARGET: ${{ secrets.PPA_TARGET || 'ppa:sabrehagen/screenpipe' }}
+      PPA_GPG_PRIVATE_KEY: ${{ secrets.PPA_GPG_PRIVATE_KEY }}
+      PPA_GPG_PASSPHRASE: ${{ secrets.PPA_GPG_PASSPHRASE }}
+      PPA_GPG_KEYID: ${{ secrets.PPA_GPG_KEYID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            devscripts \
+            debhelper \
+            dput \
+            gnupg \
+            ca-certificates \
+            build-essential \
+            pkg-config \
+            clang \
+            cmake
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.2
+
+      - name: Import launchpad gpg key
+        run: |
+          if [[ -z "$PPA_GPG_PRIVATE_KEY" || -z "$PPA_GPG_PASSPHRASE" || -z "$PPA_GPG_KEYID" ]]; then
+            echo "missing required secrets: PPA_GPG_PRIVATE_KEY, PPA_GPG_PASSPHRASE, PPA_GPG_KEYID"
+            exit 1
+          fi
+          mkdir -p ~/.gnupg
+          chmod 700 ~/.gnupg
+          printf '%s\n' "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          printf '%s\n' "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          echo "$PPA_GPG_PRIVATE_KEY" | gpg --batch --import
+          gpg --batch --list-secret-keys "$PPA_GPG_KEYID"
+
+      - name: Build signed source package
+        run: |
+          scripts/ppa/build-source.sh
+
+      - name: Upload to PPA
+        run: |
+          if [[ -z "$PPA_TARGET" ]]; then
+            echo "missing required secret: PPA_TARGET (example: ppa:yourlaunchpadid/yourppa)"
+            exit 1
+          fi
+          changes_file="$(ls -1 ../screenpipe_*source.changes 2>/dev/null | head -n 1 || true)"
+          if [[ -z "$changes_file" ]]; then
+            changes_file="$(ls -1 ../screenpipe_*.changes 2>/dev/null | head -n 1 || true)"
+          fi
+          if [[ -z "$changes_file" ]]; then
+            echo "could not find .changes file in parent dir"
+            exit 1
+          fi
+          dput "$PPA_TARGET" "$changes_file"

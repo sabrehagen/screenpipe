@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=screenpipe
+Comment=24/7 memory for your desktop
+Exec=screenpipe
+Icon=screenpipe
+Terminal=false
+Categories=Utility;
