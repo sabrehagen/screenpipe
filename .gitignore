@@ -10,6 +10,9 @@
 
 # Rust/Cargo specific files
 *target
+vendor-workspace/
+vendor-app/
+debian/files
 
 # IDE specific files
 .idea/

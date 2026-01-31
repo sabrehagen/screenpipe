@@ -39,7 +39,14 @@ tar \
   .
 
 echo "building source package..."
-if [[ -n "${PPA_GPG_KEYID:-}" && -n "${PPA_GPG_PASSPHRASE:-}" ]]; then
+# dpkg-source will refuse "unrepresentable changes" if any build artifacts are present in-tree.
+# make the source build hermetic by removing common build output dirs first.
+rm -rf target screenpipe-app-tauri/src-tauri/target screenpipe-app-tauri/target
+
+# allow fast local verification without gpg (ci always signs)
+if [[ "${PPA_NO_SIGN:-}" == "1" ]]; then
+  debuild --no-lintian -S -sa -us -uc
+elif [[ -n "${PPA_GPG_KEYID:-}" && -n "${PPA_GPG_PASSPHRASE:-}" ]]; then
   # non-interactive signing (for ci)
   debuild --no-lintian -S -sa \
     -k"$PPA_GPG_KEYID" \
