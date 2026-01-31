@@ -8,7 +8,7 @@ this repo includes debian packaging to publish:
 
 launchpad builds are network-restricted, so the source upload must include:
 
-- vendored rust deps in `debian/vendor-workspace` and `debian/vendor-app`
+- vendored rust deps in `vendor/` (a single Cargo vendor dir)
 - prebuilt next static export in `screenpipe-app-tauri/out` (tauri embeds this at compile time)
 
 ### one-time setup on your machine

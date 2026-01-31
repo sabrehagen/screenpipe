@@ -8,8 +8,7 @@ export CARGO_NET_OFFLINE = true
 	dh $@
 
 override_dh_auto_configure:
-	@test -d vendor-workspace || (echo "missing vendor-workspace. run scripts/ppa/prepare-source.sh" && false)
-	@test -d vendor-app || (echo "missing vendor-app. run scripts/ppa/prepare-source.sh" && false)
+	@test -d vendor || (echo "missing vendor. run scripts/ppa/prepare-source.sh" && false)
 	@test -f screenpipe-app-tauri/out/index.html || (echo "missing screenpipe-app-tauri/out. run scripts/ppa/prepare-source.sh (builds next export)" && false)
 
 override_dh_auto_build:

@@ -12,6 +12,8 @@
 *target
 vendor-workspace/
 vendor-app/
+vendor/
+debian/cargo-home-*/
 debian/files
 
 # IDE specific files
@@ -22,8 +24,8 @@ debian/files
 # act cli
 .secrets
 
-# db 
-data/ 
+# db
+data/
 text_json/
 
 src-tauri/deno-*
@@ -45,7 +47,7 @@ onnxruntime-win-x64-gpu*/
 node_modules/
 
 
-cn 
+cn
 
 
 # Python stuff
