@@ -71,6 +71,12 @@ jobs:
 
       - name: Build signed source package
         run: |
+          # debian-only ppa bumps (tags like vX.Y.Z-ppaN) must NOT re-upload orig.tar.xz
+          # because launchpad keeps the orig tarball immutable for the upstream version.
+          # for upstream version tags (vX.Y.Z), we DO want to include orig.tar.xz.
+          if [[ "${GITHUB_REF_TYPE:-}" == "tag" && "${GITHUB_REF_NAME:-}" != *"-ppa"* ]]; then
+            export PPA_FORCE_ORIG=1
+          fi
           scripts/ppa/build-source.sh
 
       - name: Upload to PPA

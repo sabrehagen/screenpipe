@@ -1,8 +1,8 @@
-screenpipe (2.0.168-0ubuntu1~noble4) noble; urgency=medium
+screenpipe (2.0.168-0ubuntu1~noble5) noble; urgency=medium
 
-  * Fix quilt patch format for Cargo.lock v3 downgrade.
+  * fix launchpad rejection: avoid reuploading orig.tar.xz for -ppa revisions
 
- -- Jackson Delahunt <jackson@jacksondelahunt.com>  Sat, 31 Jan 2026 17:45:00 +0000
+ -- Jackson Delahunt <jackson@jacksondelahunt.com>  Mon, 02 Feb 2026 00:00:00 +0000
 
 screenpipe (2.0.168-0ubuntu1~noble1) noble; urgency=medium
 

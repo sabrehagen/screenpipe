@@ -4,6 +4,23 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
+# #region agent log (ppa packaging debug)
+debug_log_path="${SCREENPIPE_DEBUG_LOG_PATH:-/home/jackson/repositories/sabrehagen/screenpipe/.cursor/debug.log}"
+ndjson_log() {
+  # minimal NDJSON logger (no secrets). usage: ndjson_log hypothesisId location message data_json
+  local hypothesis_id="${1:-unknown}"
+  local location="${2:-unknown}"
+  local message="${3:-}"
+  local data_json="${4:-{}}"
+  # keep formatting dead-simple to avoid malformed json
+  printf '{"sessionId":"debug-session","runId":"pre-fix","hypothesisId":"%s","location":"%s","message":"%s","data":%s,"timestamp":%s}\n' \
+    "$hypothesis_id" "$location" "$message" "$data_json" "$(date +%s%3N)" >> "$debug_log_path" 2>/dev/null || true
+}
+
+ndjson_log "A" "scripts/ppa/build-source.sh:entry" "build-source entry" \
+  "$(printf '{"pwd":"%s","gitRef":"%s"}' "$(pwd)" "$(git rev-parse --short HEAD 2>/dev/null || echo unknown)")"
+# #endregion agent log
+
 if [[ ! -f debian/changelog ]]; then
   echo "missing debian/changelog"
   exit 1
@@ -48,11 +65,25 @@ cd "$stage_dir"
 echo "preparing generated sources in staged tree (vendor + next out)..."
 scripts/ppa/prepare-source.sh
 
+# #region agent log (ppa packaging debug)
+ndjson_log "A" "scripts/ppa/build-source.sh:after-prepare" "after prepare-source.sh" \
+  "$(printf '{"vendorExists":%s,"outIndexExists":%s,"outIndexSha256":"%s"}' \
+    "$(test -d vendor && echo true || echo false)" \
+    "$(test -f screenpipe-app-tauri/out/index.html && echo true || echo false)" \
+    "$(sha256sum screenpipe-app-tauri/out/index.html 2>/dev/null | awk "{print \$1}" || echo "")")"
+# #endregion agent log
+
 echo "ensuring orig tarball exists (required for 3.0 (quilt))..."
 # debian/changelog version includes debian revision; orig tarball uses the upstream part
 full_version="$(dpkg-parsechangelog -SVersion)"
 upstream_version="${full_version%%-*}"
 orig_tarball="$stage_root/screenpipe_${upstream_version}.orig.tar.xz"
+
+# #region agent log (ppa packaging debug)
+debian_revision="${full_version#${upstream_version}}"
+ndjson_log "B" "scripts/ppa/build-source.sh:version" "parsed versions" \
+  "$(printf '{"full":"%s","upstream":"%s","debianRevision":"%s"}' "$full_version" "$upstream_version" "$debian_revision")"
+# #endregion agent log
 
 echo "preflight: sizing orig tarball inputs (sanity check)..."
 # this is approximate (filesystem du), but catches obvious bloat before we spend minutes compressing.
@@ -96,6 +127,14 @@ tar \
   --transform="s,^\\.,screenpipe-${upstream_version}," \
 | xz -T0 -9e > "$orig_tarball"
 
+# #region agent log (ppa packaging debug)
+ndjson_log "B" "scripts/ppa/build-source.sh:orig" "orig tarball created" \
+  "$(printf '{"path":"%s","sha256":"%s","bytes":%s}' \
+    "$orig_tarball" \
+    "$(sha256sum "$orig_tarball" 2>/dev/null | awk "{print \$1}" || echo "")" \
+    "$(stat -c %s "$orig_tarball" 2>/dev/null || echo 0)")"
+# #endregion agent log
+
 echo "building source package..."
 # dpkg-source will refuse "unrepresentable changes" if any build artifacts are present in-tree.
 # make the source build hermetic by removing common build output dirs first.
@@ -103,15 +142,37 @@ rm -rf target screenpipe-app-tauri/src-tauri/target screenpipe-app-tauri/target
 
 # allow fast local verification without gpg (ci always signs)
 if [[ "${PPA_NO_SIGN:-}" == "1" ]]; then
-  debuild --no-lintian -S -sa -us -uc
+  # default to -sd to avoid re-uploading orig.tar.xz for debian-only revisions (launchpad rejects changed orig).
+  # use PPA_FORCE_ORIG=1 when uploading a brand new upstream version.
+  if [[ "${PPA_FORCE_ORIG:-0}" == "1" ]]; then
+    ndjson_log "C" "scripts/ppa/build-source.sh:debuild" "debuild mode (no sign)" '{"mode":"-sa"}'
+    debuild --no-lintian -S -sa -us -uc
+  else
+    ndjson_log "C" "scripts/ppa/build-source.sh:debuild" "debuild mode (no sign)" '{"mode":"-sd"}'
+    debuild --no-lintian -S -sd -us -uc
+  fi
 elif [[ -n "${PPA_GPG_KEYID:-}" && -n "${PPA_GPG_PASSPHRASE:-}" ]]; then
   # non-interactive signing (for ci)
-  debuild --no-lintian -S -sa \
-    -k"$PPA_GPG_KEYID" \
-    -p"gpg --batch --yes --pinentry-mode loopback --passphrase ${PPA_GPG_PASSPHRASE}"
+  if [[ "${PPA_FORCE_ORIG:-0}" == "1" ]]; then
+    ndjson_log "C" "scripts/ppa/build-source.sh:debuild" "debuild mode (signed)" '{"mode":"-sa"}'
+    debuild --no-lintian -S -sa \
+      -k"$PPA_GPG_KEYID" \
+      -p"gpg --batch --yes --pinentry-mode loopback --passphrase ${PPA_GPG_PASSPHRASE}"
+  else
+    ndjson_log "C" "scripts/ppa/build-source.sh:debuild" "debuild mode (signed)" '{"mode":"-sd"}'
+    debuild --no-lintian -S -sd \
+      -k"$PPA_GPG_KEYID" \
+      -p"gpg --batch --yes --pinentry-mode loopback --passphrase ${PPA_GPG_PASSPHRASE}"
+  fi
 else
   # interactive signing (local)
-  debuild --no-lintian -S -sa
+  if [[ "${PPA_FORCE_ORIG:-0}" == "1" ]]; then
+    ndjson_log "C" "scripts/ppa/build-source.sh:debuild" "debuild mode (interactive)" '{"mode":"-sa"}'
+    debuild --no-lintian -S -sa
+  else
+    ndjson_log "C" "scripts/ppa/build-source.sh:debuild" "debuild mode (interactive)" '{"mode":"-sd"}'
+    debuild --no-lintian -S -sd
+  fi
 fi
 
 echo "copying built artifacts back to repo parent dir..."
