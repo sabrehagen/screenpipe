@@ -1,8 +1,8 @@
-screenpipe (2.0.168-0ubuntu1~noble12) noble; urgency=medium
+screenpipe (2.0.168-0ubuntu1~noble13) noble; urgency=medium
 
-  * fix launchpad build: prune vendored binary test assets so dpkg-source accepts debian.tar.xz
+  * fix ppa ci: prune remaining vendor binary assets (.wasm/.dfa/.pdf/*.tar.*)
 
- -- Jackson Delahunt <jackson@jacksondelahunt.com>  Mon, 02 Feb 2026 00:35:00 +0000
+ -- Jackson Delahunt <jackson@jacksondelahunt.com>  Mon, 02 Feb 2026 00:40:00 +0000
 
 screenpipe (2.0.168-0ubuntu1~noble1) noble; urgency=medium
 
