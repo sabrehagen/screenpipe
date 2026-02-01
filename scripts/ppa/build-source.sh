@@ -111,6 +111,7 @@ if [[ "${PPA_FORCE_ORIG:-0}" != "1" ]]; then
       -o -name '*.tif' -o -name '*.tiff' -o -name '*.bmp' -o -name '*.wav' -o -name '*.mp3' -o -name '*.mp4' \
       -o -name '*.der' -o -name '*.p12' -o -name '*.key' -o -name '*.enc' -o -name '*.blb' -o -name '*.fst' -o -name '*.dll' \
       -o -name '*.dfa' -o -name '*.wasm' -o -name '*.pdf' -o -name '*.tar.xz' -o -name '*.tar.gz' -o -name '*.tar.bz2' \
+      -o -name '*.bin' -o -name '*.raw' \
       -o -name '.DS_Store' \
     \) -delete 2>/dev/null || true
 
