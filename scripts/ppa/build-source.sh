@@ -5,7 +5,8 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
 # #region agent log (ppa packaging debug)
-debug_log_path="${SCREENPIPE_DEBUG_LOG_PATH:-/home/jackson/repositories/sabrehagen/screenpipe/.cursor/debug.log}"
+# default to /tmp so it exists in CI runners too
+debug_log_path="${SCREENPIPE_DEBUG_LOG_PATH:-/tmp/screenpipe-debug.ndjson}"
 ndjson_log() {
   # minimal NDJSON logger (no secrets). usage: ndjson_log hypothesisId location message data_json
   local hypothesis_id="${1:-unknown}"
@@ -13,6 +14,7 @@ ndjson_log() {
   local message="${3:-}"
   local data_json="${4:-{}}"
   # keep formatting dead-simple to avoid malformed json
+  mkdir -p "$(dirname "$debug_log_path")" 2>/dev/null || true
   printf '{"sessionId":"debug-session","runId":"pre-fix","hypothesisId":"%s","location":"%s","message":"%s","data":%s,"timestamp":%s}\n' \
     "$hypothesis_id" "$location" "$message" "$data_json" "$(date +%s%3N)" >> "$debug_log_path" 2>/dev/null || true
 }
@@ -26,12 +28,83 @@ if [[ ! -f debian/changelog ]]; then
   exit 1
 fi
 
+# debian/changelog version includes debian revision; orig tarball uses the upstream part
+full_version="$(dpkg-parsechangelog -SVersion)"
+upstream_version="${full_version%%-*}"
+debian_revision="${full_version#${upstream_version}}"
+
+# #region agent log (ppa packaging debug)
+ndjson_log "B" "scripts/ppa/build-source.sh:version" "parsed versions" \
+  "$(printf '{"full":"%s","upstream":"%s","debianRevision":"%s","forceOrig":%s}' \
+    "$full_version" "$upstream_version" "$debian_revision" \
+    "$(test "${PPA_FORCE_ORIG:-0}" = "1" && echo true || echo false)")"
+# #endregion agent log
+
 stage_root="$(mktemp -d)"
 stage_dir="$stage_root/screenpipe"
 cleanup() {
   rm -rf "$stage_root"
 }
 trap cleanup EXIT
+
+if [[ "${PPA_FORCE_ORIG:-0}" != "1" ]]; then
+  echo "debian-only revision detected: reusing existing launchpad orig tarball..."
+
+  orig_tarball="$stage_root/screenpipe_${upstream_version}.orig.tar.xz"
+  orig_url="https://launchpad.net/~sabrehagen/+archive/ubuntu/screenpipe/+files/screenpipe_${upstream_version}.orig.tar.xz"
+
+  echo "downloading existing orig tarball from launchpad..."
+  # use -L because launchpad redirects to launchpadlibrarian.net
+  curl -fsSL "$orig_url" -o "$orig_tarball"
+
+  # #region agent log (ppa packaging debug)
+  ndjson_log "D" "scripts/ppa/build-source.sh:orig-download" "downloaded existing orig tarball" \
+    "$(printf '{"url":"%s","path":"%s","sha256":"%s","bytes":%s}' \
+      "$orig_url" "$orig_tarball" \
+      "$(sha256sum "$orig_tarball" 2>/dev/null | awk "{print \$1}" || echo "")" \
+      "$(stat -c %s "$orig_tarball" 2>/dev/null || echo 0)")"
+  # #endregion agent log
+
+  echo "unpacking orig tarball..."
+  tar -xJf "$orig_tarball" -C "$stage_root"
+
+  # detect extracted dir (should be screenpipe-$upstream_version)
+  extracted_dir="$stage_root/screenpipe-${upstream_version}"
+  if [[ ! -d "$extracted_dir" ]]; then
+    echo "expected extracted dir not found: $extracted_dir"
+    echo "extracted dirs:"
+    ls -1 "$stage_root" || true
+    exit 1
+  fi
+  stage_dir="$extracted_dir"
+  cd "$stage_dir"
+
+  echo "syncing debian/ packaging into extracted upstream tree..."
+  rsync -a --delete "$repo_root/debian/" "$stage_dir/debian/"
+
+  echo "building source package (no orig reupload, -sd)..."
+  if [[ "${PPA_NO_SIGN:-}" == "1" ]]; then
+    ndjson_log "D" "scripts/ppa/build-source.sh:debuild" "debuild mode (debian-only no sign)" '{"mode":"-sd"}'
+    debuild --no-lintian -S -sd -us -uc
+  elif [[ -n "${PPA_GPG_KEYID:-}" && -n "${PPA_GPG_PASSPHRASE:-}" ]]; then
+    ndjson_log "D" "scripts/ppa/build-source.sh:debuild" "debuild mode (debian-only signed)" '{"mode":"-sd"}'
+    debuild --no-lintian -S -sd \
+      -k"$PPA_GPG_KEYID" \
+      -p"gpg --batch --yes --pinentry-mode loopback --passphrase ${PPA_GPG_PASSPHRASE}"
+  else
+    ndjson_log "D" "scripts/ppa/build-source.sh:debuild" "debuild mode (debian-only interactive)" '{"mode":"-sd"}'
+    debuild --no-lintian -S -sd
+  fi
+
+  echo "copying built artifacts back to repo parent dir..."
+  for f in "$stage_root"/screenpipe_*; do
+    [[ -e "$f" ]] || continue
+    mv -f "$f" "$repo_root/../"
+  done
+
+  echo "ok: source package created in parent dir."
+  exit 0
+fi
 
 echo "staging linux ppa source tree (whitelist only)..."
 mkdir -p "$stage_dir"
@@ -74,16 +147,7 @@ ndjson_log "A" "scripts/ppa/build-source.sh:after-prepare" "after prepare-source
 # #endregion agent log
 
 echo "ensuring orig tarball exists (required for 3.0 (quilt))..."
-# debian/changelog version includes debian revision; orig tarball uses the upstream part
-full_version="$(dpkg-parsechangelog -SVersion)"
-upstream_version="${full_version%%-*}"
 orig_tarball="$stage_root/screenpipe_${upstream_version}.orig.tar.xz"
-
-# #region agent log (ppa packaging debug)
-debian_revision="${full_version#${upstream_version}}"
-ndjson_log "B" "scripts/ppa/build-source.sh:version" "parsed versions" \
-  "$(printf '{"full":"%s","upstream":"%s","debianRevision":"%s"}' "$full_version" "$upstream_version" "$debian_revision")"
-# #endregion agent log
 
 echo "preflight: sizing orig tarball inputs (sanity check)..."
 # this is approximate (filesystem du), but catches obvious bloat before we spend minutes compressing.
