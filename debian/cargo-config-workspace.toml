@@ -2,7 +2,7 @@
 replace-with = "vendored-sources"
 
 [source.vendored-sources]
-directory = "vendor"
+directory = "../vendor"
 
 # git dependencies must also be redirected to the vendored tree,
 # otherwise cargo will try to fetch them even in --offline builds (launchpad).
