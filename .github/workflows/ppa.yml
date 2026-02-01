@@ -46,7 +46,15 @@ jobs:
           sudo apt-get install -y \
             libsdl2-dev \
             librsvg2-dev \
-            libayatana-appindicator3-dev
+            libayatana-appindicator3-dev \
+            libavformat-dev \
+            libavfilter-dev \
+            libavdevice-dev \
+            libtesseract-dev \
+            libxdo-dev \
+            libwebkit2gtk-4.1-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
