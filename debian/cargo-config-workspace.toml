@@ -22,12 +22,27 @@ replace-with = "vendored-sources"
 git = "https://github.com/louis030195/cpal.git"
 replace-with = "vendored-sources"
 
+[source."https://github.com/louis030195/cpal.git?branch=main"]
+git = "https://github.com/louis030195/cpal.git"
+branch = "main"
+replace-with = "vendored-sources"
+
 [source."https://github.com/nathanbabcock/ffmpeg-sidecar"]
 git = "https://github.com/nathanbabcock/ffmpeg-sidecar"
 replace-with = "vendored-sources"
 
+[source."https://github.com/nathanbabcock/ffmpeg-sidecar?branch=main"]
+git = "https://github.com/nathanbabcock/ffmpeg-sidecar"
+branch = "main"
+replace-with = "vendored-sources"
+
 [source."https://github.com/louis030195/rusty-tesseract.git"]
 git = "https://github.com/louis030195/rusty-tesseract.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/louis030195/rusty-tesseract.git?branch=main"]
+git = "https://github.com/louis030195/rusty-tesseract.git"
+branch = "main"
 replace-with = "vendored-sources"
 
 [source."https://github.com/louis030195/sck-rs"]
@@ -40,6 +55,11 @@ replace-with = "vendored-sources"
 
 [source."https://github.com/eiz/accessibility.git"]
 git = "https://github.com/eiz/accessibility.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/eiz/accessibility.git?branch=master"]
+git = "https://github.com/eiz/accessibility.git"
+branch = "master"
 replace-with = "vendored-sources"
 
 [source."https://github.com/mediar-ai/vad-rs-1.git"]
