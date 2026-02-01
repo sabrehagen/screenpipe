@@ -2,7 +2,7 @@
 replace-with = "vendored-sources"
 
 [source.vendored-sources]
-directory = "../vendor"
+directory = "vendor"
 
 # app build shares the same vendor dir; redirect git deps too
 [source."https://github.com/huggingface/candle.git"]

@@ -1,8 +1,8 @@
-screenpipe (2.0.168-0ubuntu1~noble10) noble; urgency=medium
+screenpipe (2.0.168-0ubuntu1~noble11) noble; urgency=medium
 
-  * fix launchpad build: point vendored-sources at ../vendor (launchpad offline)
+  * fix launchpad build: generate debian/vendor so offline builds don’t need network
 
- -- Jackson Delahunt <jackson@jacksondelahunt.com>  Mon, 02 Feb 2026 00:25:00 +0000
+ -- Jackson Delahunt <jackson@jacksondelahunt.com>  Mon, 02 Feb 2026 00:30:00 +0000
 
 screenpipe (2.0.168-0ubuntu1~noble1) noble; urgency=medium
 

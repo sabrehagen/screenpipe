@@ -82,6 +82,17 @@ if [[ "${PPA_FORCE_ORIG:-0}" != "1" ]]; then
   echo "syncing debian/ packaging into extracted upstream tree..."
   rsync -a --delete "$repo_root/debian/" "$stage_dir/debian/"
 
+  echo "vendoring rust deps into debian/vendor for launchpad offline builds..."
+  rm -rf "$stage_dir/debian/vendor"
+  mkdir -p "$stage_dir/debian/vendor"
+  # workspace first
+  cargo vendor --locked "$stage_dir/debian/vendor" >/dev/null
+  # tauri app may have additional deps; vendor them into the same dir to avoid duplication
+  cargo vendor --locked --manifest-path "$stage_dir/screenpipe-app-tauri/src-tauri/Cargo.toml" "$stage_dir/debian/vendor" >/dev/null
+  # prune windows + apple crates to reduce debian.tar.xz size (launchpad is linux-only)
+  rm -rf "$stage_dir/debian/vendor"/windows "$stage_dir/debian/vendor"/windows-* "$stage_dir/debian/vendor"/windows_* "$stage_dir/debian/vendor"/windows-sys "$stage_dir/debian/vendor"/windows-sys-* "$stage_dir/debian/vendor"/windows-targets "$stage_dir/debian/vendor"/winapi-* "$stage_dir/debian/vendor"/webview2-* "$stage_dir/debian/vendor"/webview2_* "$stage_dir/debian/vendor"/windows_x86_64_* "$stage_dir/debian/vendor"/windows_i686_* "$stage_dir/debian/vendor"/windows_aarch64_* "$stage_dir/debian/vendor"/windows-*-gnu "$stage_dir/debian/vendor"/windows-*-msvc 2>/dev/null || true
+  rm -rf "$stage_dir/debian/vendor"/objc* "$stage_dir/debian/vendor"/cocoa* "$stage_dir/debian/vendor"/core-foundation* "$stage_dir/debian/vendor"/core-graphics* "$stage_dir/debian/vendor"/core-media-sys* "$stage_dir/debian/vendor"/core-video-sys* "$stage_dir/debian/vendor"/dispatch* "$stage_dir/debian/vendor"/metal* "$stage_dir/debian/vendor"/mach2* "$stage_dir/debian/vendor"/fsevent-sys* "$stage_dir/debian/vendor"/osakit* "$stage_dir/debian/vendor"/mac-notification-sys* "$stage_dir/debian/vendor"/nokhwa-bindings-macos* "$stage_dir/debian/vendor"/cidre* "$stage_dir/debian/vendor"/accessibility* 2>/dev/null || true
+
   echo "building source package (no orig reupload, -sd)..."
   if [[ "${PPA_NO_SIGN:-}" == "1" ]]; then
     ndjson_log "D" "scripts/ppa/build-source.sh:debuild" "debuild mode (debian-only no sign)" '{"mode":"-sd"}'
