@@ -1,8 +1,8 @@
-screenpipe (2.0.168-0ubuntu1~noble14) noble; urgency=medium
+screenpipe (2.0.168-0ubuntu1~noble15) noble; urgency=medium
 
-  * fix launchpad build: only build cli (skip tauri app which requires newer cargo)
+  * fix launchpad build: do not vendor tauri deps (avoid edition2024 crates with cargo 1.75)
 
- -- Jackson Delahunt <jackson@jacksondelahunt.com>  Mon, 02 Feb 2026 00:45:00 +0000
+ -- Jackson Delahunt <jackson@jacksondelahunt.com>  Mon, 02 Feb 2026 00:50:00 +0000
 
 screenpipe (2.0.168-0ubuntu1~noble1) noble; urgency=medium
 
