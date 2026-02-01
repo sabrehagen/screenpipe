@@ -100,15 +100,18 @@ if [[ "${PPA_FORCE_ORIG:-0}" != "1" ]]; then
 
   echo "pruning vendored test assets to satisfy dpkg-source (no embedded binaries in debian.tar.xz)..."
   # dpkg-source (3.0 quilt) rejects binary files inside debian/ unless explicitly whitelisted.
-  # none of these are needed for building the binaries.
-  rm -rf \
-    "$stage_dir/debian/vendor"/*/tests \
-    "$stage_dir/debian/vendor"/*/test \
-    "$stage_dir/debian/vendor"/*/benches \
-    "$stage_dir/debian/vendor"/*/examples \
-    "$stage_dir/debian/vendor"/*/fuzz \
-    "$stage_dir/debian/vendor"/*/.github \
-    "$stage_dir/debian/vendor"/*/ci \
+  # crates often keep binary blobs in nested directories (e.g. lzma-sys/xz-*/tests/*),
+  # so prune recursively by directory name first.
+  find "$stage_dir/debian/vendor" -type d \( \
+      -name tests -o -name test -o -name testdata -o -name testsamples -o -name fuzz \
+      -o -name benches -o -name examples -o -name ci -o -name .github \
+    \) -prune -exec rm -rf {} + 2>/dev/null || true
+
+  # some crates keep binary-ish fixtures in src/ (widestring); drop them too.
+  rm -f \
+    "$stage_dir/debian/vendor/widestring/src/test_be.txt" \
+    "$stage_dir/debian/vendor/widestring/src/test_le.txt" \
+    "$stage_dir/debian/vendor/widestring/src/example.txt" \
     2>/dev/null || true
   find "$stage_dir/debian/vendor" -type f \( \
       -name '*.png' -o -name '*.jpg' -o -name '*.jpeg' -o -name '*.gif' -o -name '*.webp' -o -name '*.ico' -o -name '*.icns' \
@@ -116,6 +119,7 @@ if [[ "${PPA_FORCE_ORIG:-0}" != "1" ]]; then
       -o -name '*.tif' -o -name '*.tiff' -o -name '*.bmp' -o -name '*.wav' -o -name '*.mp3' -o -name '*.mp4' \
       -o -name '*.der' -o -name '*.p12' -o -name '*.key' -o -name '*.enc' -o -name '*.blb' -o -name '*.fst' -o -name '*.dll' \
       -o -name '*.dfa' -o -name '*.wasm' -o -name '*.pdf' -o -name '*.tar.xz' -o -name '*.tar.gz' -o -name '*.tar.bz2' \
+      -o -name '*.bz2' -o -name '*.ref' \
       -o -name '*.bin' -o -name '*.raw' \
       -o -name '.DS_Store' \
     \) -delete 2>/dev/null || true
