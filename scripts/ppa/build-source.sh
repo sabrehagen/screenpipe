@@ -5,8 +5,13 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
 # #region agent log (ppa packaging debug)
-# default to /tmp so it exists in CI runners too
-debug_log_path="${SCREENPIPE_DEBUG_LOG_PATH:-/tmp/screenpipe-debug.ndjson}"
+# prefer the repo-local cursor debug log when available; fallback to /tmp for CI runners.
+default_debug_log_path="/home/jackson/repositories/sabrehagen/screenpipe/.cursor/debug.log"
+if [[ -f "$default_debug_log_path" || -d "$(dirname "$default_debug_log_path")" ]]; then
+  debug_log_path="${SCREENPIPE_DEBUG_LOG_PATH:-$default_debug_log_path}"
+else
+  debug_log_path="${SCREENPIPE_DEBUG_LOG_PATH:-/tmp/screenpipe-debug.ndjson}"
+fi
 ndjson_log() {
   # minimal NDJSON logger (no secrets). usage: ndjson_log hypothesisId location message data_json
   local hypothesis_id="${1:-unknown}"
@@ -114,6 +119,21 @@ if [[ "${PPA_FORCE_ORIG:-0}" != "1" ]]; then
       -o -name '*.bin' -o -name '*.raw' \
       -o -name '.DS_Store' \
     \) -delete 2>/dev/null || true
+
+  if [[ "${PPA_VERIFY_ONLY:-}" == "1" ]]; then
+    echo "preflight: running dpkg-source -b to validate source package (should fail if any unwanted binaries remain)..."
+    # #region agent log (ppa packaging debug)
+    ndjson_log "E" "scripts/ppa/build-source.sh:verify-only" "running dpkg-source -b (verify only)" \
+      "$(printf '{"dir":"%s","mode":"debian-only"}' "$stage_dir")"
+    # #endregion agent log
+    dpkg-source -b .
+    echo "preflight ok: dpkg-source accepted the tree"
+    # #region agent log (ppa packaging debug)
+    ndjson_log "E" "scripts/ppa/build-source.sh:verify-only" "dpkg-source ok (verify only)" \
+      "$(printf '{"dir":"%s","mode":"debian-only"}' "$stage_dir")"
+    # #endregion agent log
+    exit 0
+  fi
 
   echo "building source package (no orig reupload, -sd)..."
   if [[ "${PPA_NO_SIGN:-}" == "1" ]]; then
