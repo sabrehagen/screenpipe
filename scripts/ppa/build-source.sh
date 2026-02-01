@@ -93,6 +93,26 @@ if [[ "${PPA_FORCE_ORIG:-0}" != "1" ]]; then
   rm -rf "$stage_dir/debian/vendor"/windows "$stage_dir/debian/vendor"/windows-* "$stage_dir/debian/vendor"/windows_* "$stage_dir/debian/vendor"/windows-sys "$stage_dir/debian/vendor"/windows-sys-* "$stage_dir/debian/vendor"/windows-targets "$stage_dir/debian/vendor"/winapi-* "$stage_dir/debian/vendor"/webview2-* "$stage_dir/debian/vendor"/webview2_* "$stage_dir/debian/vendor"/windows_x86_64_* "$stage_dir/debian/vendor"/windows_i686_* "$stage_dir/debian/vendor"/windows_aarch64_* "$stage_dir/debian/vendor"/windows-*-gnu "$stage_dir/debian/vendor"/windows-*-msvc 2>/dev/null || true
   rm -rf "$stage_dir/debian/vendor"/objc* "$stage_dir/debian/vendor"/cocoa* "$stage_dir/debian/vendor"/core-foundation* "$stage_dir/debian/vendor"/core-graphics* "$stage_dir/debian/vendor"/core-media-sys* "$stage_dir/debian/vendor"/core-video-sys* "$stage_dir/debian/vendor"/dispatch* "$stage_dir/debian/vendor"/metal* "$stage_dir/debian/vendor"/mach2* "$stage_dir/debian/vendor"/fsevent-sys* "$stage_dir/debian/vendor"/osakit* "$stage_dir/debian/vendor"/mac-notification-sys* "$stage_dir/debian/vendor"/nokhwa-bindings-macos* "$stage_dir/debian/vendor"/cidre* "$stage_dir/debian/vendor"/accessibility* 2>/dev/null || true
 
+  echo "pruning vendored test assets to satisfy dpkg-source (no embedded binaries in debian.tar.xz)..."
+  # dpkg-source (3.0 quilt) rejects binary files inside debian/ unless explicitly whitelisted.
+  # none of these are needed for building the binaries.
+  rm -rf \
+    "$stage_dir/debian/vendor"/*/tests \
+    "$stage_dir/debian/vendor"/*/test \
+    "$stage_dir/debian/vendor"/*/benches \
+    "$stage_dir/debian/vendor"/*/examples \
+    "$stage_dir/debian/vendor"/*/fuzz \
+    "$stage_dir/debian/vendor"/*/.github \
+    "$stage_dir/debian/vendor"/*/ci \
+    2>/dev/null || true
+  find "$stage_dir/debian/vendor" -type f \( \
+      -name '*.png' -o -name '*.jpg' -o -name '*.jpeg' -o -name '*.gif' -o -name '*.webp' -o -name '*.ico' -o -name '*.icns' \
+      -o -name '*.ttf' -o -name '*.otf' -o -name '*.ttc' -o -name '*.woff' -o -name '*.woff2' \
+      -o -name '*.tif' -o -name '*.tiff' -o -name '*.bmp' -o -name '*.wav' -o -name '*.mp3' -o -name '*.mp4' \
+      -o -name '*.der' -o -name '*.p12' -o -name '*.key' -o -name '*.enc' -o -name '*.blb' -o -name '*.fst' -o -name '*.dll' \
+      -o -name '.DS_Store' \
+    \) -delete 2>/dev/null || true
+
   echo "building source package (no orig reupload, -sd)..."
   if [[ "${PPA_NO_SIGN:-}" == "1" ]]; then
     ndjson_log "D" "scripts/ppa/build-source.sh:debuild" "debuild mode (debian-only no sign)" '{"mode":"-sd"}'
