@@ -3,3 +3,52 @@ replace-with = "vendored-sources"
 
 [source.vendored-sources]
 directory = "vendor"
+
+# app build shares the same vendor dir; redirect git deps too
+[source."https://github.com/huggingface/candle.git"]
+git = "https://github.com/huggingface/candle.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/neo773/hf-hub"]
+git = "https://github.com/neo773/hf-hub"
+replace-with = "vendored-sources"
+
+[source."https://github.com/starkat99/half-rs.git"]
+git = "https://github.com/starkat99/half-rs.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/louis030195/cpal.git"]
+git = "https://github.com/louis030195/cpal.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/nathanbabcock/ffmpeg-sidecar"]
+git = "https://github.com/nathanbabcock/ffmpeg-sidecar"
+replace-with = "vendored-sources"
+
+[source."https://github.com/louis030195/rusty-tesseract.git"]
+git = "https://github.com/louis030195/rusty-tesseract.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/louis030195/sck-rs"]
+git = "https://github.com/louis030195/sck-rs"
+replace-with = "vendored-sources"
+
+[source."https://github.com/yury/cidre.git"]
+git = "https://github.com/yury/cidre.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/eiz/accessibility.git"]
+git = "https://github.com/eiz/accessibility.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/mediar-ai/vad-rs-1.git"]
+git = "https://github.com/mediar-ai/vad-rs-1.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/tazz4843/whisper-rs.git"]
+git = "https://github.com/tazz4843/whisper-rs.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/Neptune650/knf-rs.git"]
+git = "https://github.com/Neptune650/knf-rs.git"
+replace-with = "vendored-sources"
