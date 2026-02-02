@@ -15,8 +15,11 @@ override_dh_auto_build:
 	rm -rf debian/cargo-home-workspace
 	mkdir -p debian/cargo-home-workspace
 	cp debian/cargo-config-workspace.toml debian/cargo-home-workspace/config.toml
+	# ubuntu 24.04 cargo (1.75) cannot parse Cargo.lock v4. remove it so cargo can
+	# regenerate a compatible lockfile (v3) from vendored sources during the build.
+	rm -f Cargo.lock
 	CARGO_HOME="$(CURDIR)/debian/cargo-home-workspace" \
-		cargo build --release --locked --offline -p screenpipe-server --bin screenpipe
+		cargo build --release --offline -p screenpipe-server --bin screenpipe
 
 override_dh_auto_test:
 	# skip tests in ppa builds (heavy hardware-dependent integration tests)

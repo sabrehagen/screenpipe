@@ -48,6 +48,10 @@ ndjson_log "B" "scripts/ppa/build-source.sh:version" "parsed versions" \
 stage_root="$(mktemp -d)"
 stage_dir="$stage_root/screenpipe"
 cleanup() {
+  if [[ "${PPA_KEEP_STAGE:-0}" = "1" ]]; then
+    echo "keeping stage dir: $stage_root"
+    return 0
+  fi
   rm -rf "$stage_root"
 }
 trap cleanup EXIT
@@ -87,16 +91,61 @@ if [[ "${PPA_FORCE_ORIG:-0}" != "1" ]]; then
   echo "syncing debian/ packaging into extracted upstream tree..."
   rsync -a --delete "$repo_root/debian/" "$stage_dir/debian/"
 
+  echo "debug: repo debian/patches/series (source)"
+  cat -n "$repo_root/debian/patches/series" 2>/dev/null || true
+  echo "debug: staged debian/patches/series (dest)"
+  cat -n "$stage_dir/debian/patches/series" 2>/dev/null || true
+
+  echo "applying debian patches before vendoring (so debian/vendor matches launchpad build)..."
+  applied_patches=()
+  if [[ -f "$stage_dir/debian/patches/series" ]]; then
+    while IFS= read -r patch_name; do
+      [[ -n "$patch_name" ]] || continue
+      [[ "$patch_name" =~ ^# ]] && continue
+      echo "applying patch: $patch_name"
+      if [[ ! -f "$stage_dir/debian/patches/$patch_name" ]]; then
+        echo "missing patch listed in debian/patches/series: $patch_name"
+        exit 1
+      fi
+      patch -p1 --forward --batch < "$stage_dir/debian/patches/$patch_name" >/dev/null
+      applied_patches+=("$patch_name")
+    done < "$stage_dir/debian/patches/series"
+  fi
+
+  echo "debug: stage xcap dep (screenpipe-vision/Cargo.toml)"
+  grep -n "^[[:space:]]*xcap[[:space:]]*=" "$stage_dir/screenpipe-vision/Cargo.toml" || true
+  echo "debug: stage xcap locked version (Cargo.lock)"
+  awk 'BEGIN{in_xcap=0} $0 ~ /^name = \"xcap\"$/{in_xcap=1} in_xcap && $0 ~ /^version = /{print; exit}' "$stage_dir/Cargo.lock" || true
+
   echo "vendoring rust deps into debian/vendor for launchpad offline builds..."
   rm -rf "$stage_dir/debian/vendor"
   mkdir -p "$stage_dir/debian/vendor"
   # workspace first
-  cargo vendor --locked "$stage_dir/debian/vendor" >/dev/null
+  # do not use --locked here: we intentionally allow cargo to update the lock
+  # while resolving the patched dependency graph (we revert patches before dpkg-source).
+  cargo vendor "$stage_dir/debian/vendor" >/dev/null
   # note: we intentionally do NOT vendor tauri app deps here. launchpad uses cargo 1.75,
   # and some tauri transitive deps require newer cargo features (e.g. edition2024).
   # prune windows + apple crates to reduce debian.tar.xz size (launchpad is linux-only)
   rm -rf "$stage_dir/debian/vendor"/windows "$stage_dir/debian/vendor"/windows-* "$stage_dir/debian/vendor"/windows_* "$stage_dir/debian/vendor"/windows-sys "$stage_dir/debian/vendor"/windows-sys-* "$stage_dir/debian/vendor"/windows-targets "$stage_dir/debian/vendor"/winapi-* "$stage_dir/debian/vendor"/webview2-* "$stage_dir/debian/vendor"/webview2_* "$stage_dir/debian/vendor"/windows_x86_64_* "$stage_dir/debian/vendor"/windows_i686_* "$stage_dir/debian/vendor"/windows_aarch64_* "$stage_dir/debian/vendor"/windows-*-gnu "$stage_dir/debian/vendor"/windows-*-msvc 2>/dev/null || true
   rm -rf "$stage_dir/debian/vendor"/objc* "$stage_dir/debian/vendor"/cocoa* "$stage_dir/debian/vendor"/core-foundation* "$stage_dir/debian/vendor"/core-graphics* "$stage_dir/debian/vendor"/core-media-sys* "$stage_dir/debian/vendor"/core-video-sys* "$stage_dir/debian/vendor"/dispatch* "$stage_dir/debian/vendor"/metal* "$stage_dir/debian/vendor"/mach2* "$stage_dir/debian/vendor"/fsevent-sys* "$stage_dir/debian/vendor"/osakit* "$stage_dir/debian/vendor"/mac-notification-sys* "$stage_dir/debian/vendor"/nokhwa-bindings-macos* "$stage_dir/debian/vendor"/cidre* "$stage_dir/debian/vendor"/accessibility* 2>/dev/null || true
+
+  # launchpad ubuntu 24.04 uses cargo 1.75 which cannot parse edition2024.
+  # known offender: libwayshot-xcap declares edition2024 but doesn't rely on 2024-only language features.
+  if [[ -f "$stage_dir/debian/vendor/libwayshot-xcap/Cargo.toml" ]]; then
+    sed -i 's/^edition = "2024"$/edition = "2021"/' "$stage_dir/debian/vendor/libwayshot-xcap/Cargo.toml" 2>/dev/null || true
+  fi
+
+  # fail fast if any vendored crate still requires edition2024.
+  # only Cargo.toml matters here (ignore rustfmt.toml, Cargo.toml.orig, etc).
+  if find "$stage_dir/debian/vendor" -type f -name Cargo.toml -print0 2>/dev/null \
+    | xargs -0 grep -n '^edition = "2024"$' >/tmp/screenpipe-ppa-edition2024.txt 2>/dev/null; then
+    if [[ -s /tmp/screenpipe-ppa-edition2024.txt ]]; then
+      echo "error: debian/vendor contains edition2024 crates (not supported by ubuntu cargo 1.75):"
+      head -n 80 /tmp/screenpipe-ppa-edition2024.txt || true
+      exit 1
+    fi
+  fi
 
   echo "pruning vendored test assets to satisfy dpkg-source (no embedded binaries in debian.tar.xz)..."
   # dpkg-source (3.0 quilt) rejects binary files inside debian/ unless explicitly whitelisted.
@@ -123,6 +172,21 @@ if [[ "${PPA_FORCE_ORIG:-0}" != "1" ]]; then
       -o -name '*.bin' -o -name '*.raw' \
       -o -name '.DS_Store' \
     \) -delete 2>/dev/null || true
+
+  echo "reverting debian patches (dpkg-source will apply them later)..."
+  for (( idx=${#applied_patches[@]}-1 ; idx>=0 ; idx-- )); do
+    patch_name="${applied_patches[$idx]}"
+    [[ -n "$patch_name" ]] || continue
+    echo "reverting patch: $patch_name"
+    patch -p1 --reverse --batch < "$stage_dir/debian/patches/$patch_name" >/dev/null || true
+  done
+
+  # cargo vendor may update Cargo.lock (we intentionally allow this when resolving patched deps),
+  # but dpkg-source requires the upstream tree to remain unchanged (only debian/ + quilt patches).
+  # restore Cargo.lock from the upstream orig tree by re-extracting just that file.
+  if [[ -f "$orig_tarball" ]]; then
+    tar -xJf "$orig_tarball" -C "$stage_root" "screenpipe-${upstream_version}/Cargo.lock" 2>/dev/null || true
+  fi
 
   if [[ "${PPA_VERIFY_ONLY:-}" == "1" ]]; then
     echo "preflight: running dpkg-source -b to validate source package (should fail if any unwanted binaries remain)..."

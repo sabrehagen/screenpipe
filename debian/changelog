@@ -1,8 +1,9 @@
-screenpipe (2.0.168-0ubuntu1~noble17) noble; urgency=medium
+screenpipe (2.0.168-0ubuntu1~noble18) noble; urgency=medium
 
-  * ppa: pin xcap to edition-2021 for launchpad cargo 1.75
+  * ppa: make debian-only vendoring consistent with quilt patches (avoid edition2024, keep upstream tree clean)
+  * ppa: build without Cargo.lock v4/--locked on launchpad cargo 1.75 (regenerate lock from vendored sources)
 
- -- Jackson Delahunt <jackson@jacksondelahunt.com>  Mon, 02 Feb 2026 01:05:00 +0000
+ -- Jackson Delahunt <jackson@jacksondelahunt.com>  Mon, 02 Feb 2026 02:10:00 +0000
 
 screenpipe (2.0.168-0ubuntu1~noble16) noble; urgency=medium
 
